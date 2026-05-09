@@ -84,15 +84,13 @@ class XGBModel(BaseModel):
             "colsample_bytree": 0.8,
             "reg_alpha": 0.1,
             "reg_lambda": 1.0,
-            "use_label_encoder": False,
             "eval_metric": "auc",
             "random_state": 42,
             "verbosity": 0,
         }
+        defaults["tree_method"] = "hist"
         if use_gpu and _gpu_available():
-            defaults["tree_method"] = "gpu_hist"
-        else:
-            defaults["tree_method"] = "hist"
+            defaults["device"] = "cuda"
 
         defaults.update(kwargs)
 

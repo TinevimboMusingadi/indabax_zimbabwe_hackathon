@@ -1,0 +1,41 @@
+seed: 42
+
+data:
+  n_folds: 5
+
+features:
+  variants:
+    - v1_ohe
+    - v2_ordinal
+    - v3_target_woe
+  target_encoder_smoothing: 10.0
+  run_adversarial: true
+
+training:
+  use_gpu: false
+  models:
+    - name: lgbm
+      variant: v2_ordinal
+    - name: xgb
+      variant: v2_ordinal
+    - name: catboost
+      variant: v2_ordinal
+    - name: lr
+      variant: v1_ohe
+    - name: rf
+      variant: v1_ohe
+
+tuner:
+  enabled: false
+  n_trials: 50
+  models_to_tune:
+    - lgbm
+    - xgb
+    - catboost
+
+ensemble:
+  methods:
+    - rank_avg
+    - stacking
+    - optuna_blend
+  optuna_blend_trials: 200

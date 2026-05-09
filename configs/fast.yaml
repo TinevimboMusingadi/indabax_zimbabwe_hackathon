@@ -1,0 +1,35 @@
+# CPU-friendly smoke test — ~5 min on a laptop
+seed: 42
+
+data:
+  n_folds: 3
+
+features:
+  variants:
+    - v2_ordinal
+  target_encoder_smoothing: 10.0
+  run_adversarial: false
+
+training:
+  use_gpu: false
+  models:
+    - name: lgbm
+      variant: v2_ordinal
+      params:
+        n_estimators: 200
+        num_leaves: 31
+        learning_rate: 0.1
+    - name: xgb
+      variant: v2_ordinal
+      params:
+        n_estimators: 200
+        max_depth: 6
+        learning_rate: 0.1
+
+tuner:
+  enabled: false
+
+ensemble:
+  methods:
+    - rank_avg
+  optuna_blend_trials: 0

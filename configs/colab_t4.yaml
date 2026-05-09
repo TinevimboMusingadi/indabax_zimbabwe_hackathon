@@ -1,0 +1,72 @@
+# Colab T4 GPU — ~25-40 min
+seed: 42
+
+data:
+  n_folds: 5
+
+features:
+  variants:
+    - v2_ordinal
+    - v3_target_woe
+  target_encoder_smoothing: 10.0
+  run_adversarial: true
+
+training:
+  use_gpu: true
+  models:
+    - name: lgbm
+      variant: v2_ordinal
+      params:
+        n_estimators: 1000
+        num_leaves: 63
+        learning_rate: 0.05
+        subsample: 0.8
+        colsample_bytree: 0.8
+        reg_alpha: 0.1
+        reg_lambda: 1.0
+    - name: xgb
+      variant: v2_ordinal
+      params:
+        n_estimators: 1000
+        max_depth: 7
+        learning_rate: 0.05
+        subsample: 0.8
+        colsample_bytree: 0.8
+        reg_alpha: 0.1
+        reg_lambda: 1.0
+    - name: catboost
+      variant: v2_ordinal
+      params:
+        iterations: 1000
+        depth: 7
+        learning_rate: 0.05
+    - name: tabnet
+      variant: v2_ordinal
+      params:
+        n_d: 64
+        n_a: 64
+        n_steps: 5
+        gamma: 1.5
+        max_epochs: 100
+    - name: mlp
+      variant: v3_target_woe
+      params:
+        hidden_dims: [256, 128, 64]
+        dropout: 0.3
+        lr: 0.001
+        epochs: 50
+
+tuner:
+  enabled: true
+  n_trials: 50
+  models_to_tune:
+    - lgbm
+    - xgb
+    - catboost
+
+ensemble:
+  methods:
+    - rank_avg
+    - stacking
+    - optuna_blend
+  optuna_blend_trials: 200

@@ -1,0 +1,49 @@
+# Data — NEVER commit per Zindi rules
+Train.csv
+Test.csv
+SampleSubmission.csv
+VariableDefinitions.csv
+data/raw/
+data/processed/
+data/splits/
+
+# Artefacts
+submissions/
+logs/
+optuna_studies/
+results/
+
+# Zindi manifest
+manifest-*.json
+
+# Context / planning files
+context_files/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Environments
+.env
+.env.*
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

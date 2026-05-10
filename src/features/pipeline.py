@@ -114,23 +114,49 @@ def _build_v3_target_woe(
     folds_df: pd.DataFrame,
     config: PipelineConfig,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    """Target encoding + WOE + group stats."""
-    smoothing = config.features.target_encoder_smoothing
+    """Target encoding + WOE + group stats.
 
+    WOE and group-stats are computed on the original categorical columns
+    and added as NEW columns (suffixed) alongside the target-encoded ones.
+    """
+    smoothing = config.features.target_encoder_smoothing
+    cat_cols = [
+        c for c in train_fe.columns
+        if train_fe[c].dtype.name in ("category", "object")
+    ]
+
+    # WOE: compute on ORIGINAL categoricals, store as separate columns
+    woe = WOEEncoder(cat_cols=cat_cols)
+    woe.fit(train_fe, y)
+    tr_woe = woe.transform(train_fe[cat_cols].copy())
+    te_woe = woe.transform(test_fe[cat_cols].copy())
+    tr_woe = tr_woe.rename(columns={c: f"{c}_woe" for c in cat_cols})
+    te_woe = te_woe.rename(columns={c: f"{c}_woe" for c in cat_cols})
+
+    # Group stats: compute on ORIGINAL categoricals
+    gs = GroupStatsEncoder()
+    gs.fit(train_fe, y)
+    tr_gs = gs.transform(train_fe[["province", "employment_sector"]].copy())
+    te_gs = gs.transform(test_fe[["province", "employment_sector"]].copy())
+    gs_new_cols = [
+        c for c in tr_gs.columns
+        if c not in ("province", "employment_sector")
+    ]
+
+    # Target encoding: replaces categoricals in-place with target means
     te_enc = KFoldTargetEncoder(smoothing=smoothing)
     te_enc.fit(train_fe, y, folds_df)
     tr_encoded = te_enc.transform_train(train_fe, y, folds_df)
     te_encoded = te_enc.transform(test_fe)
 
-    woe = WOEEncoder()
-    woe.fit(train_fe, y)
-    tr_encoded = woe.transform(tr_encoded)
-    te_encoded = woe.transform(te_encoded)
+    # Merge WOE and group-stat columns alongside target-encoded data
+    for col in tr_woe.columns:
+        tr_encoded[col] = tr_woe[col].values
+        te_encoded[col] = te_woe[col].values
 
-    gs = GroupStatsEncoder()
-    gs.fit(train_fe, y)
-    tr_encoded = gs.transform(tr_encoded)
-    te_encoded = gs.transform(te_encoded)
+    for col in gs_new_cols:
+        tr_encoded[col] = tr_gs[col].values
+        te_encoded[col] = te_gs[col].values
 
     return tr_encoded, te_encoded
 

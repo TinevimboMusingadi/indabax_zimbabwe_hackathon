@@ -65,6 +65,7 @@ class BaseFeatureEngineer:
             raise RuntimeError("Call fit() before transform().")
 
         df = df.copy()
+        df = self._missing_indicators(df)
         df = self._impute(df)
         df = self._date_features(df)
         df = self._numeric_ratios(df)
@@ -75,6 +76,20 @@ class BaseFeatureEngineer:
     def fit_transform(self, train: pd.DataFrame) -> pd.DataFrame:
         """Convenience: fit on train, then transform it."""
         return self.fit(train).transform(train)
+
+    def _missing_indicators(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Create binary flags for columns with informative missingness."""
+        indicator_cols = [
+            "collateral_type", "monthly_income_usd",
+            "num_dependents", "months_at_employer",
+            "employment_sector", "loan_purpose",
+        ]
+        for col in indicator_cols:
+            if col in df.columns:
+                df[f"{col}_was_missing"] = (
+                    df[col].isna().astype(np.float32)
+                )
+        return df
 
     def _impute(self, df: pd.DataFrame) -> pd.DataFrame:
         for col, med in self.numeric_medians_.items():
@@ -173,6 +188,38 @@ class BaseFeatureEngineer:
         if income is not None:
             df["log_monthly_income_usd"] = np.log1p(income)
 
+        # --- additional ratio/flag features ---
+
+        # Bank vs MFI flag (annual_rate_pct is bimodal around 40%)
+        if rate is not None:
+            df["is_mfi_loan"] = (rate > 40.0).astype(np.float32)
+            df["rate_bucket"] = pd.cut(
+                rate,
+                bins=[0, 15, 40, 100, 210],
+                labels=False,
+            ).astype(np.float32)
+
+        # Amount per month — simple repayment proxy
+        if amount is not None and term is not None:
+            safe_term = term.clip(lower=1)
+            df["amount_per_month"] = amount / safe_term
+
+        # Total cost of the loan
+        if amount is not None and rate is not None and term is not None:
+            df["total_loan_cost"] = amount * (1 + rate / 100 * term / 12)
+
+        # High-obligation borrower flag
+        if obligations is not None:
+            df["has_many_obligations"] = (
+                obligations >= 3
+            ).astype(np.float32)
+
+        # Short-tenure employee flag
+        if months_emp is not None:
+            df["is_new_employee"] = (
+                months_emp < 12
+            ).astype(np.float32)
+
         return df
 
     def _interaction_features(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -198,6 +245,34 @@ class BaseFeatureEngineer:
                 .fillna(0)
                 .astype(int)
             )
+
+        if (
+            "disbursement_channel" in df.columns
+            and "province" in df.columns
+        ):
+            df["channel_province"] = (
+                df["disbursement_channel"].astype(str)
+                + "_"
+                + df["province"].astype(str)
+            ).astype("category")
+
+        # Amount rank within product code
+        if "amount_usd" in df.columns and "product_code" in df.columns:
+            df["amount_rank_in_product"] = df.groupby("product_code")[
+                "amount_usd"
+            ].rank(pct=True)
+
+        # Income rank within province
+        if "monthly_income_usd" in df.columns and "province" in df.columns:
+            df["income_rank_in_province"] = df.groupby("province")[
+                "monthly_income_usd"
+            ].rank(pct=True)
+
+        # Has any collateral at all
+        if "collateral_type" in df.columns:
+            df["has_collateral"] = (
+                df["collateral_type"].astype(str) != "None"
+            ).astype(np.float32)
 
         return df
 

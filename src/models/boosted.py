@@ -29,9 +29,10 @@ class LGBMModel(BaseModel):
         from lightgbm import LGBMClassifier
 
         defaults: dict[str, Any] = {
-            "n_estimators": 1000,
-            "num_leaves": 63,
-            "learning_rate": 0.05,
+            "n_estimators": 3000,
+            "num_leaves": 31,
+            "learning_rate": 0.01,
+            "min_child_samples": 30,
             "subsample": 0.8,
             "colsample_bytree": 0.8,
             "reg_alpha": 0.1,
@@ -59,7 +60,7 @@ class LGBMModel(BaseModel):
         if X_val is not None and y_val is not None:
             fit_params["eval_set"] = [(X_val, y_val)]
             fit_params["callbacks"] = [
-                _lgbm_early_stopping(50),
+                _lgbm_early_stopping(200),
                 _lgbm_log_eval(100),
             ]
         self.model.fit(X_train, y_train, **fit_params)

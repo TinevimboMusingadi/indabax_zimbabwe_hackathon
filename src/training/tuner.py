@@ -39,9 +39,16 @@ def tune_model(
     y = train_df[TARGET_COL].values.astype(np.float32)
     X = np.nan_to_num(X, nan=0.0)
 
+    use_gpu = any(
+        e.use_gpu for e in config.training.models if e.name == model_name
+    )
+
     def objective(trial: optuna.Trial) -> float:
         params = _suggest_params(trial, model_name)
         from src.models.base import build_model
+
+        if model_name in ("lgbm", "xgb", "catboost"):
+            params["use_gpu"] = use_gpu
 
         n_folds = folds_df["fold_id"].nunique()
         fold_aucs = []

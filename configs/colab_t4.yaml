@@ -15,11 +15,31 @@ training:
   use_gpu: true
   models:
     - name: lgbm
+      variant: v3_target_woe
+      params:
+        n_estimators: 3000
+        num_leaves: 31
+        learning_rate: 0.01
+        subsample: 0.8
+        colsample_bytree: 0.8
+        reg_alpha: 0.1
+        reg_lambda: 1.0
+    - name: lgbm
       variant: v2_ordinal
       params:
-        n_estimators: 1000
-        num_leaves: 63
-        learning_rate: 0.05
+        n_estimators: 3000
+        num_leaves: 31
+        learning_rate: 0.01
+        subsample: 0.8
+        colsample_bytree: 0.8
+        reg_alpha: 0.1
+        reg_lambda: 1.0
+    - name: xgb
+      variant: v3_target_woe
+      params:
+        n_estimators: 3000
+        max_depth: 6
+        learning_rate: 0.01
         subsample: 0.8
         colsample_bytree: 0.8
         reg_alpha: 0.1
@@ -27,34 +47,19 @@ training:
     - name: xgb
       variant: v2_ordinal
       params:
-        n_estimators: 1000
-        max_depth: 7
-        learning_rate: 0.05
+        n_estimators: 3000
+        max_depth: 6
+        learning_rate: 0.01
         subsample: 0.8
         colsample_bytree: 0.8
         reg_alpha: 0.1
         reg_lambda: 1.0
     - name: catboost
-      variant: v2_ordinal
-      params:
-        iterations: 1000
-        depth: 7
-        learning_rate: 0.05
-    - name: tabnet
-      variant: v2_ordinal
-      params:
-        n_d: 64
-        n_a: 64
-        n_steps: 5
-        gamma: 1.5
-        max_epochs: 100
-    - name: mlp
       variant: v3_target_woe
       params:
-        hidden_dims: [256, 128, 64]
-        dropout: 0.3
-        lr: 0.001
-        epochs: 50
+        iterations: 3000
+        depth: 6
+        learning_rate: 0.01
 
 tuner:
   enabled: true

@@ -1,4 +1,4 @@
-# CPU-friendly smoke test — ~5 min on a laptop
+# CPU-friendly smoke test — ~5-10 min on a laptop
 seed: 42
 
 data:
@@ -7,6 +7,7 @@ data:
 features:
   variants:
     - v2_ordinal
+    - v3_target_woe
   target_encoder_smoothing: 10.0
   run_adversarial: false
 
@@ -14,17 +15,17 @@ training:
   use_gpu: false
   models:
     - name: lgbm
-      variant: v2_ordinal
+      variant: v3_target_woe
       params:
-        n_estimators: 200
+        n_estimators: 1000
         num_leaves: 31
-        learning_rate: 0.1
+        learning_rate: 0.02
     - name: xgb
-      variant: v2_ordinal
+      variant: v3_target_woe
       params:
-        n_estimators: 200
+        n_estimators: 1000
         max_depth: 6
-        learning_rate: 0.1
+        learning_rate: 0.02
 
 tuner:
   enabled: false

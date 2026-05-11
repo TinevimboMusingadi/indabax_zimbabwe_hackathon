@@ -116,8 +116,9 @@ def _build_v3_target_woe(
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Target encoding + WOE + group stats.
 
-    WOE and group-stats are computed on the original categorical columns
-    and added as NEW columns (suffixed) alongside the target-encoded ones.
+    WOE is restricted to low-cardinality categoricals (nunique <= 30) to
+    avoid severe target leakage through high-cardinality interaction
+    features like province_sector (~130 categories).
     """
     smoothing = config.features.target_encoder_smoothing
     cat_cols = [
@@ -125,15 +126,23 @@ def _build_v3_target_woe(
         if train_fe[c].dtype.name in ("category", "object")
     ]
 
-    # WOE: compute on ORIGINAL categoricals, store as separate columns
-    woe = WOEEncoder(cat_cols=cat_cols)
-    woe.fit(train_fe, y)
-    tr_woe = woe.transform(train_fe[cat_cols].copy())
-    te_woe = woe.transform(test_fe[cat_cols].copy())
-    tr_woe = tr_woe.rename(columns={c: f"{c}_woe" for c in cat_cols})
-    te_woe = te_woe.rename(columns={c: f"{c}_woe" for c in cat_cols})
+    woe_cols = [
+        c for c in cat_cols if train_fe[c].nunique() <= 30
+    ]
+    logger.info(
+        "WOE encoding %d/%d cat cols (skipping high-cardinality)",
+        len(woe_cols), len(cat_cols),
+    )
 
-    # Group stats: compute on ORIGINAL categoricals
+    # WOE on low-cardinality categoricals only
+    woe = WOEEncoder(cat_cols=woe_cols)
+    woe.fit(train_fe, y)
+    tr_woe = woe.transform(train_fe[woe_cols].copy())
+    te_woe = woe.transform(test_fe[woe_cols].copy())
+    tr_woe = tr_woe.rename(columns={c: f"{c}_woe" for c in woe_cols})
+    te_woe = te_woe.rename(columns={c: f"{c}_woe" for c in woe_cols})
+
+    # Group stats on province and employment_sector
     gs = GroupStatsEncoder()
     gs.fit(train_fe, y)
     tr_gs = gs.transform(train_fe[["province", "employment_sector"]].copy())
@@ -143,13 +152,12 @@ def _build_v3_target_woe(
         if c not in ("province", "employment_sector")
     ]
 
-    # Target encoding: replaces categoricals in-place with target means
+    # Target encoding (OOF for train, global for test)
     te_enc = KFoldTargetEncoder(smoothing=smoothing)
     te_enc.fit(train_fe, y, folds_df)
     tr_encoded = te_enc.transform_train(train_fe, y, folds_df)
     te_encoded = te_enc.transform(test_fe)
 
-    # Merge WOE and group-stat columns alongside target-encoded data
     for col in tr_woe.columns:
         tr_encoded[col] = tr_woe[col].values
         te_encoded[col] = te_woe[col].values

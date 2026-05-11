@@ -10,6 +10,7 @@ data/splits/
 # Artefacts
 submissions/
 logs/
+catboost_info/
 optuna_studies/
 results/
 

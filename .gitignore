@@ -1,18 +1,5 @@
 # Data — NEVER commit per Zindi rules
-Train.csv
-Test.csv
-SampleSubmission.csv
-VariableDefinitions.csv
-data/raw/
-data/processed/
-data/splits/
 
-# Artefacts
-submissions/
-logs/
-catboost_info/
-optuna_studies/
-results/
 
 # Zindi manifest
 manifest-*.json
